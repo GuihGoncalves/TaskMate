@@ -1,5 +1,5 @@
 // src/screens/HomeScreen.js
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,22 +9,21 @@ import {
   Platform,
   Keyboard,
   Alert,
+  TextInput,
   StatusBar,
   SafeAreaView,
   Modal,
-  TextInput,
   TouchableWithoutFeedback,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { styles } from '../styles/AppStyles'; 
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { styles } from '../styles/appStyles'; // Caminho para estilos
-import { modalStyles } from '../styles/modalStyles'; // Caminho para estilos
-import { GestureHandlerRootView, PanGestureHandler, State } from 'react-native-gesture-handler';
+import { modalStyles } from '../styles/ModalStyles'; 
+
 
 const STORAGE_KEY = '@taskmate_tasks';
 
-// Componente de Cabeçalho
 const Header = ({ theme, toggleTheme }) => {
   const iconColor = theme === 'dark' ? '#fff' : '#000';
 
@@ -45,7 +44,6 @@ const Header = ({ theme, toggleTheme }) => {
   );
 };
 
-// Função principal do aplicativo
 const HomeScreen = () => {
   const [theme, setTheme] = useState('light');
   const [tasks, setTasks] = useState([]);
@@ -57,10 +55,29 @@ const HomeScreen = () => {
   const [isKeyboardVisible, setKeyboardVisible] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [editingTask, setEditingTask] = useState(null);
+  const [isDeleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const textColor = theme === 'dark' ? '#fff' : '#000';   
+  const [taskTime, setTaskTime] = useState(''); 
+
+
 
   const sections = ['new', 'inProgress', 'completed'];
 
   useEffect(() => {
+    Alert.alert(
+      "Bem-vindo ao TaskMate!",
+      "Aqui estão algumas dicas para usar o app:\n\n\n" +
+      "1. Adicione tarefas clicando no botão 'Nova Tarefa'.\n\n" +
+      "2. Navegue entre as seções para ver suas tarefas novas, em andamento e concluídas.\n\n" +
+      "3. Clique em uma tarefa para editá-la ou excluí-la.\n\n" +
+      "4. Utilize as setas nas tarefas para avançar ou retroceder o status da tarefa.\n",
+      [
+        { text: "Ok", onPress: () => console.log("Tutorial encerrado") }
+      ],
+      { cancelable: false }
+    );
+    
     loadTasks();
     const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () =>
       setKeyboardVisible(true)
@@ -94,12 +111,13 @@ const HomeScreen = () => {
   };
 
   const addTask = () => {
-    if (taskName.trim()) {
+    if (taskName.trim() && taskDate && taskTime) {
       const newTask = {
         id: Date.now().toString(),
         name: taskName,
         description: taskDescription,
         date: taskDate,
+        time: taskTime, 
         status: 'new',
       };
       const newTasks = [...tasks, newTask];
@@ -113,6 +131,7 @@ const HomeScreen = () => {
     setTaskName('');
     setTaskDescription('');
     setTaskDate('');
+    setTaskTime(''); 
     setEditingTask(null);
     setModalVisible(false);
   };
@@ -125,10 +144,20 @@ const HomeScreen = () => {
     saveTasks(updatedTasks);
   };
 
-  const deleteTask = (id) => {
-    const filteredTasks = tasks.filter((t) => t.id !== id);
-    setTasks(filteredTasks);
-    saveTasks(filteredTasks);
+  const deleteTask = () => {
+    if (taskToDelete) {
+      const filteredTasks = tasks.filter((t) => t.id !== taskToDelete.id);
+      setTasks(filteredTasks);
+      saveTasks(filteredTasks);
+      setDeleteModalVisible(false);
+      setTaskToDelete(null);
+    }
+  };
+
+
+  const confirmDeleteTask = (task) => {
+    setTaskToDelete(task);
+    setDeleteModalVisible(true);
   };
 
   const showDatePickerModal = () => setShowDatePicker(true);
@@ -145,6 +174,7 @@ const HomeScreen = () => {
   const openTask = (task) => {
     setEditingTask(task);
     setTaskName(task.name);
+    setTaskTime(task.time); 
     setTaskDescription(task.description);
     setTaskDate(task.date);
     setModalVisible(true);
@@ -153,7 +183,7 @@ const HomeScreen = () => {
   const updateTask = () => {
     const updatedTasks = tasks.map((t) =>
       t.id === editingTask.id
-        ? { ...t, name: taskName, description: taskDescription, date: taskDate }
+        ? { ...t, name: taskName, description: taskDescription, date: taskDate, time: taskTime }
         : t
     );
     setTasks(updatedTasks);
@@ -162,21 +192,20 @@ const HomeScreen = () => {
   };
 
   const renderTaskItem = ({ item }) => {
-  const textColor = theme === 'dark' ? '#fff' : '#000'; // Cor condicional com base no tema
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'new':
-        return 'red';
-      case 'inProgress':
-        return 'yellow';
-      case 'completed':
-        return 'green';
-      default:
-        return 'gray';
-    }
-  };
-
+    
+    const getStatusColor = (status) => {
+      switch (status) {
+        case 'new':
+          return 'red';
+        case 'inProgress':
+          return 'yellow';
+        case 'completed':
+          return 'green';
+        default:
+          return 'gray';
+      }
+    };
+  
     return (
       <TouchableOpacity onPress={() => openTask(item)} style={styles.taskItem}>
         <View style={styles.taskStatusIndicator}>
@@ -185,34 +214,35 @@ const HomeScreen = () => {
         <View style={styles.taskDetails}>
           <Text style={[styles.taskTitle, { color: textColor }]}>{item.name}</Text>
           <Text style={[styles.taskDescription, { color: textColor }]}>{item.description}</Text>
-          <Text style={[styles.taskDate, { color: textColor }]}>{item.date}</Text>
+        <Text style={styles.taskDate}>{`${item.date} ${item.time}`}</Text>
       </View>
         <View style={styles.taskActions}>
+        {item.status === 'inProgress' && (
+            <TouchableOpacity onPress={() => updateTaskStatus(item.id, 'new')}>
+              <Ionicons name="arrow-back" size={30} style={styles.actionIconArrow} />
+            </TouchableOpacity>
+          )}
+          {item.status === 'completed' && (
+            <TouchableOpacity onPress={() => updateTaskStatus(item.id, 'inProgress')}>
+              <Ionicons name="arrow-back" size={30} style={styles.actionIconArrow} />
+            </TouchableOpacity>
+          )}
           {item.status === 'new' && (
             <TouchableOpacity onPress={() => updateTaskStatus(item.id, 'inProgress')}>
-              <Ionicons name="arrow-forward" size={25} style={styles.actionIconArrow} />
+              <Ionicons name="arrow-forward" size={30} style={styles.actionIconArrow} />
             </TouchableOpacity>
           )}
           {item.status === 'inProgress' && (
             <TouchableOpacity onPress={() => updateTaskStatus(item.id, 'completed')}>
-              <Ionicons name="arrow-forward" size={25} style={styles.actionIconArrow} />
+              <Ionicons name="arrow-forward" size={30} style={styles.actionIconArrow} />
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => deleteTask(item.id)}>
-            <Ionicons name="trash" size={25} style={styles.actionIconTrash} />
+          <TouchableOpacity onPress={() => confirmDeleteTask(item)}>
+            <Ionicons name="trash" size={30} style={[styles.actionIconTrash,{ color:'red'}]} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
-  };
-
-  const onGestureEvent = (event) => {
-    const { translationX } = event.nativeEvent;
-      if (translationX > 100 && sectionIndex > 3) { // Aumentado de 50 para 100
-          setSectionIndex(sectionIndex - 1);
-      } else if (translationX < 0 && sectionIndex < sections.length - 1) { // Aumentado de 50 para 100
-          setSectionIndex(sectionIndex + 1);
-      }
   };
 
 
@@ -227,102 +257,167 @@ const HomeScreen = () => {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}>
+          <View style={styles.sectionButtons}>
+            {sections.map((section, index) => (
+              <TouchableOpacity
+                key={index}
+                onPress={() => setSectionIndex(index)}
+                style={[
+                  styles.sectionButton,
+                  sectionIndex === index && styles.selectedSection,
+                ]}>
+                <Text style={[styles.sectionButtonText, {color:textColor}]}>{section === 'new' ? 'Novas' : section === 'inProgress' ? 'Em Andamento' : 'Concluídas'}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+
+          <FlatList
+            data={filteredTasks}
+            renderItem={renderTaskItem}
+            keyExtractor={(item) => item.id}
+          />
         
-        <GestureHandlerRootView style={{ flex: 1 }}>
-          <PanGestureHandler onGestureEvent={onGestureEvent}>
-            <View style={{ flex: 1 }}>
-              <View style={styles.sectionButtons}>
-                {sections.map((section, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={() => setSectionIndex(index)}
-                    style={[
-                      styles.sectionButton,
-                      sectionIndex === index && styles.selectedSection,
-                    ]}>
-                    <Text style={styles.sectionButtonText}>{section === 'new' ? 'Novas' : section === 'inProgress' ? 'Em Andamento' : 'Concluídas'}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {sectionIndex === 0 && (
-                <TouchableOpacity onPress={() => setModalVisible(true)} style={styles.newTaskButton}>
-                  <Text style={styles.newTaskButtonText}>Nova Tarefa</Text>
-                </TouchableOpacity>
-              )}
-
-              <FlatList
-                data={filteredTasks}
-                renderItem={renderTaskItem}
-                keyExtractor={(item) => item.id}
-              />
-            </View>
-          </PanGestureHandler>
-        </GestureHandlerRootView>
-
         {isKeyboardVisible && <View style={{ height: 300 }} />}
       </KeyboardAvoidingView>
 
       <Modal
         visible={isModalVisible}
-        animationType="slide"
-        transparent={true} // Modal com fundo transparente
-        onRequestClose={resetModal} // Permite fechar com o botão "voltar" no Android
+        transparent={true}
+        onRequestClose={resetModal}
       >
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <TouchableWithoutFeedback onPress={resetModal}> 
           <View style={modalStyles.overlay}>
-            <View style={modalStyles.modalContent}>
-              <Text style={modalStyles.modalTitle}>
-                {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
-              </Text>
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+              <View style={modalStyles.modalContent}>
+                <View style={modalStyles.modalHeader}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (editingTask) { 
+                        const newStatus =
+                          editingTask.status === 'completed'
+                            ? 'inProgress'
+                            : editingTask.status === 'inProgress'
+                            ? 'new'
+                            : 'new'; 
+                        updateTaskStatus(editingTask.id, newStatus);
+                      }
+                    }}
+                    disabled={editingTask?.status === 'new'}
+                  >
+                  </TouchableOpacity>
 
-              <TextInput
-                placeholder="Título"
-                value={taskName}
-                onChangeText={setTaskName}
-                style={modalStyles.input}
-                maxLength={50} // Limite de caracteres para título
-              />
+                  <Text style={modalStyles.modalTitle}>
+                    {editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}
+                  </Text>
 
-              <TextInput
-                placeholder="Descrição (opcional)"
-                value={taskDescription}
-                onChangeText={setTaskDescription}
-                style={[modalStyles.input, modalStyles.descriptionInput]}
-                multiline={true} // Permitir várias linhas
-              />
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (editingTask){
+                        const newStatus =
+                          editingTask.status === 'new'
+                            ? 'inProgress'
+                            : editingTask.status === 'inProgress'
+                            ? 'completed'
+                            : 'completed'; 
+                        updateTaskStatus(editingTask.id, newStatus);
+                      }
+                    }}
+                    disabled={editingTask?.status === 'completed'}
+                  >
+                  </TouchableOpacity>
+                </View>
 
-              <TouchableOpacity onPress={showDatePickerModal} style={modalStyles.dateButton}>
-                <Text style={modalStyles.dateButtonText}>
-                  {taskDate || 'Selecione a Data'}
-                </Text>
-                <Ionicons name="calendar" size={20} style={modalStyles.calendarIcon} />
-              </TouchableOpacity>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={new Date()}
-                  mode="date"
-                  display="default"
-                  onChange={handleDateChange}
+                <TextInput
+                  placeholder="Título"
+                  value={taskName}
+                  onChangeText={setTaskName}
+                  style={modalStyles.input}
+                  maxLength={50}
                 />
-              )}
+
+                <TextInput
+                  placeholder="Descrição (opcional)"
+                  value={taskDescription}
+                  onChangeText={setTaskDescription}
+                  style={[modalStyles.input, modalStyles.descriptionInput]}
+                  multiline={true}
+                />
+
+                <Text style={styles.sectionButtonText}>Defina uma Data e Hora prazo</Text>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={new Date()}
+                    mode="date"
+                    display="default"
+                    onChange={handleDateChange}
+                  />
+                )}
+
+
+                <TouchableOpacity onPress={showDatePickerModal} style={modalStyles.dateButton}>
+                  <Text style={modalStyles.dateButtonText}>
+                    {taskDate || 'Selecione a Data'}
+                  </Text>
+                  
+                  <TextInput
+                    placeholder="Hora (HH:MM)"
+                    value={taskTime}
+                    onChangeText={setTaskTime}
+                  />
+                  <Ionicons name="calendar" size={20} style={modalStyles.calendarIcon} />
+                </TouchableOpacity>
+                
+                <View style={modalStyles.buttonContainer}>
+                  <TouchableOpacity
+                    onPress={editingTask ? updateTask : addTask}
+                    style={[
+                      modalStyles.submitButton,
+                      !taskName.trim() && modalStyles.disabledButton, 
+                    ]}
+                    disabled={!taskName.trim()} 
+                  >
+                    <Text style={modalStyles.submitButtonText}>
+                      {editingTask ? 'Atualizar Tarefa' : 'Adicionar Tarefa'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity onPress={resetModal} style={modalStyles.cancelButton}>
+                    <Text style={modalStyles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+
+                </View>
+              </View>
+            </TouchableWithoutFeedback> 
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      <Modal
+        visible={isDeleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={resetModal}> 
+          <View style={modalStyles.overlay}>          
+            <View style={modalStyles.modalContent}>
+              <Text style={modalStyles.modalTitle}>Confirmar Exclusão</Text>
+              <Text style={{ textAlign: 'center', marginVertical: 10 }}>
+                Tem certeza que deseja excluir a tarefa "{taskToDelete ? taskToDelete.name : ''}"?
+              </Text>
 
               <View style={modalStyles.buttonContainer}>
                 <TouchableOpacity
-                  onPress={editingTask ? updateTask : addTask}
-                  style={[
-                    modalStyles.submitButton,
-                    !taskName.trim() && modalStyles.disabledButton, // Desativar se o título estiver vazio
-                  ]}
-                  disabled={!taskName.trim()} // Evitar envio com título vazio
+                  onPress={deleteTask}
+                  style={modalStyles.submitButton}
                 >
-                  <Text style={modalStyles.submitButtonText}>
-                    {editingTask ? 'Atualizar Tarefa' : 'Adicionar Tarefa'}
-                  </Text>
+                  <Text style={modalStyles.submitButtonText}>Excluir</Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity onPress={resetModal} style={modalStyles.cancelButton}>
+                <TouchableOpacity
+                  onPress={() => setDeleteModalVisible(false)}
+                  style={modalStyles.cancelButton}
+                >
                   <Text style={modalStyles.cancelButtonText}>Cancelar</Text>
                 </TouchableOpacity>
               </View>
@@ -331,6 +426,15 @@ const HomeScreen = () => {
         </TouchableWithoutFeedback>
       </Modal>
 
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => {
+          resetModal();
+          setModalVisible(true);
+        }}
+      >
+        <Ionicons name="add" size={24} color="white" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 };

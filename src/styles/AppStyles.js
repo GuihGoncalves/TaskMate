@@ -1,4 +1,3 @@
-// src/styles/appStyles.js
 import { StyleSheet } from 'react-native';
 
 export const styles = StyleSheet.create({
@@ -35,7 +34,7 @@ export const styles = StyleSheet.create({
     borderRadius: 5,
   },
   selectedSection: {
-    backgroundColor: '#d3d3d3', // cor de fundo quando selecionado
+    backgroundColor: '#d3d3d3', 
   },
   sectionButtonText: {
     fontWeight: 'bold',
@@ -98,5 +97,23 @@ export const styles = StyleSheet.create({
   lightBackground: {
     backgroundColor: '#fff',
   },
-  
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5, 
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
 });
