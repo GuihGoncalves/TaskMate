@@ -1,4 +1,3 @@
-// src/screens/HomeScreen.js
 import { useState, useEffect } from 'react';
 import {
   View,
@@ -75,7 +74,7 @@ const HomeScreen = () => {
       [
         { text: "Ok", onPress: () => console.log("Tutorial encerrado") }
       ],
-      { cancelable: false }
+      { cancelable: true }
     );
     
     loadTasks();
@@ -433,7 +432,7 @@ const HomeScreen = () => {
           setModalVisible(true);
         }}
       >
-        <Ionicons name="add" size={24} color="white" />
+        <Ionicons name="add" size={30} color="white" />
       </TouchableOpacity>
     </SafeAreaView>
   );
